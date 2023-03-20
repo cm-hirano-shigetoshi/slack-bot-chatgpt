@@ -1,0 +1,49 @@
+service: cm-hirano-slack-chatgpt
+
+provider:
+  name: aws
+  runtime: python3.9
+  region: ap-northeast-1
+  memorySize: 128
+  role: LambdaRole
+  stage: dev
+
+functions:
+  Test01:
+    handler: handler/test01.lambda_handler
+    url: true
+    timeout: 180
+    layers:
+      - Ref: PythonRequirementsLambdaLayer
+
+resources:
+  Resources:
+    LambdaRole:
+      Type: AWS::IAM::Role
+      Properties:
+        RoleName: ${self:service}-lambdaRole-${self:provider.stage}
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - lambda.amazonaws.com
+              Action: sts:AssumeRole
+        ManagedPolicyArns:
+          - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+          - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+          - arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess
+
+custom:
+  pythonRequirements:
+    layer: true
+plugins:
+  - serverless-python-requirements
+
+package:
+  exclude:
+    - .git/**
+    - node_modules
+    - node_modules/**
+    - __pycache__
