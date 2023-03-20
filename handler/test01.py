@@ -12,6 +12,8 @@ PARAM_OPENAI_API_KEY = "/cm-hirano/dev/OpenAI/ApiKey"
 PARAM_SLACK_BOT_TOKEN = "/cm-hirano/dev/Slack/BotToken"
 # DynamoDBのテーブル
 DYNAMODB_TABLE = "cm-hirano-slack-chatgpt"
+# ChatGPTのsystem配列
+PARAM_OPENAI_API_SYSTEM_CONTENTS = "/cm-hirano/dev/OpenAI/SystemContents"
 
 dynamodb_client = boto3.client("dynamodb")
 ssm_client = boto3.client("ssm")
@@ -114,12 +116,18 @@ def get_target_conversation(chat_events):
 
 
 def get_chatgpt_response(conversation, question):
+    def generate_system():
+        return ssm_client.get_parameter(Name=PARAM_OPENAI_API_SYSTEM_CONTENTS)[
+            "Parameter"
+        ]["Value"]
+
+    system = [{"role": "system", "content": x} for x in generate_system().split(",")]
     new_conversation = conversation + [{"role": "user", "content": question}]
 
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=new_conversation,
-    )
+    message = system + new_conversation
+    print(f"message: {message}")
+
+    response = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=message)
     return response.choices[0]["message"]["content"].strip()
 
 
@@ -203,7 +211,7 @@ def lambda_handler(event, context):
         chat_events = get_chat_events(thread_ts)
         print(f"chat_events: {chat_events}")
         target_conversation = get_target_conversation(chat_events)
-        print(f"target_conversation: {target_conversation}")
+        # print(f"target_conversation: {target_conversation}")
         answer = get_chatgpt_response(target_conversation, question)
         print(f"answer: {answer}")
         current_ts = get_current_ts()
