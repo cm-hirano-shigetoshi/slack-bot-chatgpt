@@ -29,10 +29,7 @@ slack_bot = WebClient(
 
 
 def get_question(body):
-    try:
-        return body["event"]["blocks"][0]["elements"][0]["elements"][1]["text"]
-    except Exception:
-        return body["event"]["text"]
+    return body["event"]["text"]
 
 
 def get_channel(body):
